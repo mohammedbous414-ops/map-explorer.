@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 
 void main() {
   runApp(const MapApp());
@@ -13,7 +14,7 @@ class MapApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'خريطة جهات وأقاليم المغرب',
+      title: 'خريطة ورحلات المغرب',
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -37,6 +38,10 @@ class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
   final LatLng _centerMorocco = const LatLng(31.7917, -7.0926);
 
+  LatLng? _currentLocation;
+  LatLng? _tripDestination;
+  String _tripDestinationName = '';
+
   final List<Map<String, dynamic>> _moroccoLocations = [
     // جهة طنجة تطوان الحسيمة
     {'name': 'طنجة', 'type': 'مركز جهة / إقليم', 'location': const LatLng(35.7595, -5.8340)},
@@ -50,86 +55,34 @@ class _MapScreenState extends State<MapScreen> {
     {'name': 'وجدة', 'type': 'مركز جهة / إقليم', 'location': const LatLng(34.6814, -1.9086)},
     {'name': 'الناظور', 'type': 'إقليم', 'location': const LatLng(35.1681, -2.9335)},
     {'name': 'بركان', 'type': 'إقليم', 'location': const LatLng(34.9197, -2.3225)},
-    {'name': 'الدريوش', 'type': 'إقليم', 'location': const LatLng(34.9811, -3.3888)},
-    {'name': 'تاوريرت', 'type': 'إقليم', 'location': const LatLng(34.4072, -2.8972)},
-    {'name': 'جرادة', 'type': 'إقليم', 'location': const LatLng(34.3100, -2.1600)},
-    {'name': 'فجيج (بوعرفة)', 'type': 'إقليم', 'location': const LatLng(32.5306, -1.9606)},
 
     // جهة فاس مكناس
     {'name': 'فاس', 'type': 'مركز جهة / إقليم', 'location': const LatLng(34.0331, -5.0003)},
     {'name': 'مكناس', 'type': 'إقليم', 'location': const LatLng(33.8935, -5.5473)},
-    {'name': 'تازة', 'type': 'إقليم', 'location': const LatLng(34.2142, -4.0108)},
-    {'name': 'صفرو', 'type': 'إقليم', 'location': const LatLng(33.8306, -4.8322)},
     {'name': 'إفران', 'type': 'إقليم', 'location': const LatLng(33.5228, -5.1105)},
-    {'name': 'تاونات', 'type': 'إقليم', 'location': const LatLng(34.5369, -4.6403)},
-    {'name': 'الحاجب', 'type': 'إقليم', 'location': const LatLng(33.6881, -5.3708)},
 
     // جهة الرباط سلا القنيطرة
     {'name': 'الرباط', 'type': 'عاصمة / مركز جهة', 'location': const LatLng(34.0209, -6.8416)},
     {'name': 'سلا', 'type': 'إقليم', 'location': const LatLng(34.0339, -6.8000)},
     {'name': 'القنيطرة', 'type': 'إقليم', 'location': const LatLng(34.2610, -6.5802)},
-    {'name': 'الخميسات', 'type': 'إقليم', 'location': const LatLng(33.8160, -6.0666)},
-    {'name': 'سيدي قاسم', 'type': 'إقليم', 'location': const LatLng(34.2217, -5.7078)},
-    {'name': 'سيدي سليمان', 'type': 'إقليم', 'location': const LatLng(34.2600, -5.9200)},
-    {'name': 'الصخيرات - تمارة', 'type': 'إقليم', 'location': const LatLng(33.9172, -6.9231)},
-
-    // جهة بني ملال خنيفرة
-    {'name': 'بني ملال', 'type': 'مركز جهة / إقليم', 'location': const LatLng(32.3373, -6.3498)},
-    {'name': 'خنيفرة', 'type': 'إقليم', 'location': const LatLng(32.9358, -5.6697)},
-    {'name': 'خريبكة', 'type': 'إقليم', 'location': const LatLng(32.8810, -6.9063)},
-    {'name': 'أزيلال', 'type': 'إقليم', 'location': const LatLng(31.9644, -6.5714)},
-    {'name': 'الفقيه بن صالح', 'type': 'إقليم', 'location': const LatLng(32.5036, -6.6908)},
 
     // جهة الدار البيضاء سطات
     {'name': 'الدار البيضاء', 'type': 'مركز جهة / العاصمة الاقتصادية', 'location': const LatLng(33.5731, -7.5898)},
-    {'name': 'المحمدية', 'type': 'عمالة', 'location': const LatLng(33.6866, -7.3828)},
     {'name': 'سطات', 'type': 'إقليم', 'location': const LatLng(33.0016, -7.6166)},
     {'name': 'الجديدة', 'type': 'إقليم', 'location': const LatLng(33.2316, -8.5007)},
-    {'name': 'برشيد', 'type': 'إقليم', 'location': const LatLng(33.2661, -7.5875)},
-    {'name': 'سيدي بنور', 'type': 'إقليم', 'location': const LatLng(32.6519, -8.4267)},
-    {'name': 'بنسليمان', 'type': 'إقليم', 'location': const LatLng(33.6128, -7.1217)},
-    {'name': 'النواصر (بوسكورة)', 'type': 'إقليم', 'location': const LatLng(33.4489, -7.6486)},
 
     // جهة مراكش آسفي
     {'name': 'مراكش', 'type': 'مركز جهة / عمالة', 'location': const LatLng(31.6295, -7.9811)},
     {'name': 'آسفي', 'type': 'إقليم', 'location': const LatLng(32.2994, -9.2372)},
     {'name': 'الصويرة', 'type': 'إقليم', 'location': const LatLng(31.5085, -9.7595)},
-    {'name': 'قلعة السراغنة', 'type': 'إقليم', 'location': const LatLng(32.0547, -7.4069)},
-    {'name': 'الحوز (تحناوت)', 'type': 'إقليم', 'location': const LatLng(31.2825, -7.9511)},
-    {'name': 'شيشاوة', 'type': 'إقليم', 'location': const LatLng(31.5333, -8.7667)},
-    {'name': 'الرحامنة (بن جرير)', 'type': 'إقليم', 'location': const LatLng(32.2356, -7.9525)},
-    {'name': 'اليوسفية', 'type': 'إقليم', 'location': const LatLng(32.2464, -8.5294)},
-
-    // جهة درعة تافيلالت
-    {'name': 'الرشيدية', 'type': 'مركز جهة / إقليم', 'location': const LatLng(31.9314, -4.4267)},
-    {'name': 'ورزازات', 'type': 'إقليم', 'location': const LatLng(30.9189, -6.8934)},
-    {'name': 'ميدلت', 'type': 'إقليم', 'location': const LatLng(32.6853, -4.7319)},
-    {'name': 'تنغير', 'type': 'إقليم', 'location': const LatLng(31.5147, -5.5328)},
-    {'name': 'زاكورة', 'type': 'إقليم', 'location': const LatLng(30.3314, -5.8375)},
 
     // جهة سوس ماسة
     {'name': 'أكادير', 'type': 'مركز جهة / عمالة', 'location': const LatLng(30.4278, -9.5981)},
-    {'name': 'إنزكان أيت ملول', 'type': 'عمالة', 'location': const LatLng(30.3556, -9.5381)},
     {'name': 'تارودانت', 'type': 'إقليم', 'location': const LatLng(30.4703, -8.8770)},
-    {'name': 'تيزنيت', 'type': 'إقليم', 'location': const LatLng(29.6974, -9.7316)},
-    {'name': 'شتوكة أيت باها', 'type': 'إقليم', 'location': const LatLng(30.0711, -9.1558)},
-    {'name': 'طاطا', 'type': 'إقليم', 'location': const LatLng(29.7428, -7.9733)},
 
-    // جهة كلميم واد نون
-    {'name': 'كلميم', 'type': 'مركز جهة / إقليم', 'location': const LatLng(28.9870, -10.0574)},
-    {'name': 'طنطان', 'type': 'إقليم', 'location': const LatLng(28.4378, -11.1033)},
-    {'name': 'سيدي إفني', 'type': 'إقليم', 'location': const LatLng(29.3797, -10.1731)},
-    {'name': 'آسا الزاك', 'type': 'إقليم', 'location': const LatLng(28.6083, -9.4283)},
-
-    // جهة العيون الساقية الحمراء
+    // الصحراء المغربية
     {'name': 'العيون', 'type': 'مركز جهة / إقليم', 'location': const LatLng(27.1253, -13.1625)},
-    {'name': 'بوجدور', 'type': 'إقليم', 'location': const LatLng(26.1264, -14.4842)},
-    {'name': 'السمارة', 'type': 'إقليم', 'location': const LatLng(26.7422, -11.6719)},
-    {'name': 'طرفاية', 'type': 'إقليم', 'location': const LatLng(27.9392, -12.9264)},
-
-    // جهة الداخلة وادي الذهب
     {'name': 'الداخلة', 'type': 'مركز جهة / إقليم', 'location': const LatLng(23.6848, -15.9579)},
-    {'name': 'أوسرد', 'type': 'إقليم', 'location': const LatLng(22.5564, -14.3317)},
   ];
 
   List<Map<String, dynamic>> _filteredLocations = [];
@@ -152,17 +105,87 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  void _moveToLocation(LatLng location) {
-    _mapController.move(location, 11.0);
+  Future<void> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('المرجو تفعيل خدمة الـ GPS في الهاتف')),
+      );
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم رفض صلاحية الوصول للموقع')),
+        );
+        return;
+      }
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+
+    setState(() {
+      _currentLocation = LatLng(position.latitude, position.longitude);
+    });
+
+    _mapController.move(_currentLocation!, 13.0);
+  }
+
+  void _startTripTo(Map<String, dynamic> item) {
+    if (_currentLocation == null) {
+      _determinePosition().then((_) {
+        if (_currentLocation != null) {
+          _setTrip(item);
+        }
+      });
+    } else {
+      _setTrip(item);
+    }
+  }
+
+  void _setTrip(Map<String, dynamic> item) {
+    setState(() {
+      _tripDestination = item['location'];
+      _tripDestinationName = item['name'];
+      _filteredLocations = _moroccoLocations;
+    });
+
+    _mapController.move(_currentLocation!, 7.0);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('تم تحديد مسار الرحلة نحو $_tripDestinationName 🚗')),
+    );
+  }
+
+  void _clearTrip() {
+    setState(() {
+      _tripDestination = null;
+      _tripDestinationName = '';
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('خريطة جهات وأقاليم المغرب 🇲🇦'),
+        title: const Text('مستكشف الرحلات والمواقع 🇲🇦'),
         centerTitle: true,
         backgroundColor: Colors.teal.shade900,
+        actions: [
+          if (_tripDestination != null)
+            IconButton(
+              icon: const Icon(Icons.clear_all, color: Colors.orangeAccent),
+              onPressed: _clearTrip,
+              tooltip: 'إلغاء الرحلة',
+            ),
+        ],
       ),
       body: Stack(
         children: [
@@ -177,44 +200,59 @@ class _MapScreenState extends State<MapScreen> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.mohammedbous414.map_explorer_app',
               ),
+              if (_currentLocation != null && _tripDestination != null)
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: [_currentLocation!, _tripDestination!],
+                      strokeWidth: 4.5,
+                      color: Colors.cyanAccent,
+                    ),
+                  ],
+                ),
               MarkerLayer(
-                markers: _moroccoLocations.map((item) {
-                  return Marker(
-                    point: item['location'],
-                    width: 75,
-                    height: 55,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.location_on,
-                          color: Colors.redAccent,
-                          size: 26,
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: Colors.black87,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: Colors.tealAccent, width: 0.5),
-                          ),
-                          child: Text(
-                            item['name'],
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 8.5,
-                              fontWeight: FontWeight.bold,
+                markers: [
+                  ..._moroccoLocations.map((item) {
+                    return Marker(
+                      point: item['location'],
+                      width: 75,
+                      height: 55,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.location_on, color: Colors.redAccent, size: 24),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: Colors.black87,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              item['name'],
+                              style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    );
+                  }),
+                  if (_currentLocation != null)
+                    Marker(
+                      point: _currentLocation!,
+                      width: 50,
+                      height: 50,
+                      child: const Icon(
+                        Icons.my_location,
+                        color: Colors.blueAccent,
+                        size: 32,
+                      ),
                     ),
-                  );
-                }).toList(),
+                ],
               ),
             ],
           ),
+
+          // شريط البحث
           Positioned(
             top: 10,
             left: 15,
@@ -225,7 +263,7 @@ class _MapScreenState extends State<MapScreen> {
                 onChanged: _filterSearch,
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
-                  hintText: 'ابحث عن إقليم أو جهة...',
+                  hintText: 'ابحث عن إقليم أو وجهة رحلة...',
                   hintStyle: TextStyle(color: Colors.grey),
                   prefixIcon: Icon(Icons.search, color: Colors.tealAccent),
                   border: InputBorder.none,
@@ -234,13 +272,15 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
+
+          // قائمة نتائج البحث مع زر الرحلة
           if (_filteredLocations.length < _moroccoLocations.length && _filteredLocations.isNotEmpty)
             Positioned(
               top: 70,
               left: 20,
               right: 20,
               child: Container(
-                maxHeight: 200,
+                maxHeight: 250,
                 color: Colors.black90,
                 child: ListView.builder(
                   shrinkWrap: true,
@@ -250,8 +290,17 @@ class _MapScreenState extends State<MapScreen> {
                     return ListTile(
                       title: Text(item['name'], style: const TextStyle(color: Colors.white)),
                       subtitle: Text(item['type'], style: const TextStyle(color: Colors.tealAccent, fontSize: 11)),
+                      trailing: ElevatedButton.icon(
+                        icon: const Icon(Icons.directions_car, size: 16),
+                        label: const Text('رحلة', style: TextStyle(fontSize: 11)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal.shade700,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () => _startTripTo(item),
+                      ),
                       onTap: () {
-                        _moveToLocation(item['location']);
+                        _mapController.move(item['location'], 11.0);
                         setState(() {
                           _filteredLocations = _moroccoLocations;
                         });
@@ -262,6 +311,12 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _determinePosition,
+        backgroundColor: Colors.tealAccent.shade700,
+        icon: const Icon(Icons.gps_fixed, color: Colors.white),
+        label: const Text('موقعي الحالي', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }
